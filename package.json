@@ -1,0 +1,17 @@
+{
+  "name": "aws-node-http-api-project",
+  "private": "true",
+  "devDependencies": {
+    "eslint": "^8.47.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.28.0",
+    "eslint-plugin-n": "^16.0.1",
+    "eslint-plugin-promise": "^6.1.1",
+    "serverless-dotenv-plugin": "6.0.0",
+    "serverless-offline": "12.0.4",
+    "serverless-s3-local": "0.7.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.391.0"
+  }
+}

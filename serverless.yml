@@ -1,0 +1,70 @@
+service: aws-node-http-api-project
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  # httpApi:
+  #   authorizers:
+  #     customAuthorizer:
+  #       name: validateSession
+  #       type: request
+  #       functionName: validateSession
+
+custom:
+  s3:
+    host: localhost
+    directory: /tmp
+resources:
+  Resources:
+    NewResource:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: local-bucket
+
+functions:
+  home:
+    handler: src/app/controllers.home
+    events:
+      - httpApi:
+          path: /
+          method: get
+  path:
+    handler: src/app/controllers.path
+    events:
+      - httpApi:
+          path: /path
+          method: get
+  persons:
+    handler: src/app/controllers.persons
+    events:
+      - httpApi:
+          path: /persons
+          method: get
+  addS3Object:
+    handler: src/app/controllers.addObjectToBucket
+    events:
+      - httpApi:
+          path: /add-s3-object
+          method: get
+  listS3Objects:
+    handler: src/app/controllers.listOfBucketObjects
+    events:
+      - http:
+          path: /object-list
+          method: get
+          authorizer: validateSession
+  validateSession:
+    handler: src/app/middleware/authorizer.validateSession
+  # s3hook:
+  #   handler: src/app/utils/s3_bucket.s3hook
+  #   events:
+  #     - s3: local-bucket
+  #       event: s3:*
+
+plugins:
+  - serverless-offline
+  - serverless-s3-local
+  - serverless-dotenv-plugin
+
+useDotenv: true
