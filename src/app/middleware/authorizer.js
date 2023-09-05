@@ -8,18 +8,20 @@ const ACCESS_ACTION = {
 const generatePolicy = (principalId, effect, resource, customErrorMessage = null) => {
   const authResponse = { principalId }
 
-  if (effect && resource) {
-    const Statement = [{
-      Action: 'execute-api:Invoke',
-      Effect: effect,
-      Resource: resource
-    }]
-    const policyDocument = { Version: '2012-10-17', Statement }
-
-    authResponse.policyDocument = policyDocument
+  if (!effect || !resource) {
+    throw new Error('Effect and resource are required for policyDocument')
   }
 
-  if (effect.toLowerCase() === ACCESS_ACTION.deny && customErrorMessage != null) {
+  const Statement = [{
+    Action: 'execute-api:Invoke',
+    Effect: effect,
+    Resource: resource
+  }]
+
+  const policyDocument = { Version: '2012-10-17', Statement }
+  authResponse.policyDocument = policyDocument
+
+  if (effect === ACCESS_ACTION.deny && customErrorMessage != null) {
     authResponse.context = {
       customErrorMessage
     }
@@ -28,19 +30,19 @@ const generatePolicy = (principalId, effect, resource, customErrorMessage = null
   return authResponse
 }
 
-const validateSession = (event, _context, callback) => {
+export const validateSession = (event, _context, callback) => {
+  const token = event.authorizationToken
+
+  let user, profile
   try {
-    const token = event.authorizationToken
-    const { user, profile } = JSON.parse(token.substr(NORMALIZE_BEARER_TOKEN))
-
-    if (VALID_PROFILES.includes(profile.toUpperCase())) {
-      callback(null, generatePolicy(user, ACCESS_ACTION.allow, event.methodArn))
-    } else {
-      callback(null, generatePolicy(user, ACCESS_ACTION.deny, event.methodArn, 'Unauthorized'))
-    }
+    ({ user, profile } = JSON.parse(token.substr(NORMALIZE_BEARER_TOKEN)))
   } catch (error) {
-    throw new Error('Invalid Token')
+    throw new Error('Invalid Token Format')
   }
-}
 
-module.exports = { validateSession }
+  if (VALID_PROFILES.includes(profile.toUpperCase())) {
+    callback(null, generatePolicy(user, ACCESS_ACTION.allow, event.methodArn))
+    return
+  }
+  callback(null, generatePolicy(user, ACCESS_ACTION.deny, event.methodArn, 'Unauthorized'))
+}

@@ -1,0 +1,11 @@
+version: "3"
+
+services:
+  queue:
+    image: softwaremill/elasticmq:latest
+    container_name: sns_sqs_elacticmq
+    ports:
+      - 9324:9324
+      - 9325:9325
+    volumes:
+      - ./config/elasticmq.conf:/opt/elasticmq.conf

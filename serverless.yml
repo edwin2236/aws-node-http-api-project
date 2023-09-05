@@ -1,54 +1,100 @@
 service: aws-node-http-api-project
 frameworkVersion: "3"
+useDotenv: true
 
 provider:
   name: aws
   runtime: nodejs18.x
-  # httpApi:
-  #   authorizers:
-  #     customAuthorizer:
-  #       name: validateSession
-  #       type: request
-  #       functionName: validateSession
+  region: us-east-1
+  stage: ${opt:stage, "development"}
+  profile: default
+  memorySize: 128 # minimum memory size on amazon lambda
+  environment:
+    NODE_ENV: ${self:provider.stage}
+    SERVICE: ${self:service}
+    AWS_DEPLOY_REGION: ${self:provider.region}
+    AWS_ACCOUNT_ID: "#{AWS::AccountId}"
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+        - lambda:InvokeAsync
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - SQS:SendMessage
+        - SQS:DeleteMessage
+        - SQS:ReceiveMessage
+        - SQS:GetQueueUrl
+        - SQS:ListQueues
+      Resource: "*"
 
 custom:
   s3:
     host: localhost
     directory: /tmp
+  serverless-offline: 
+    port: 3001
+  # serverless-offline-sns:
+  #   port: 4002
+  #   debug: false
+  serverless-offline-sqs:
+    autoCreate: true
+    apiVersion: "2012-11-05"
+    endpoint: http://localhost:9324
+    region: us-east-1
+    accessKeyId: root
+    secretAccessKey: root
+    skipCacheInvalidation: false
+
 resources:
   Resources:
     NewResource:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: local-bucket
+    firstQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-sqs-firstQueue
+        # QueueName: aws-node-http-api-project-development-sqs-firstQueue
+    # secondQueue:
+    #   Type: AWS::SQS::Queue
+    #   Properties:
+    #     QueueName: ${self:service}-${self:provider.stage}-sqs-secondQueue
+
+package:
+  individually: true
+  exclude:
+    - elasticMQ
 
 functions:
   home:
-    handler: src/app/controllers.home
+    handler: src/app/controllers/index.home
     events:
-      - httpApi:
+      - http:
           path: /
           method: get
   path:
-    handler: src/app/controllers.path
+    handler: src/app/controllers/index.path
     events:
-      - httpApi:
+      - http:
           path: /path
           method: get
   persons:
-    handler: src/app/controllers.persons
+    handler: src/app/controllers/index.persons
     events:
-      - httpApi:
+      - http:
           path: /persons
           method: get
   addS3Object:
-    handler: src/app/controllers.addObjectToBucket
+    handler: src/app/controllers/index.addObjectToBucket
     events:
-      - httpApi:
+      - http:
           path: /add-s3-object
-          method: get
+          method: post
   listS3Objects:
-    handler: src/app/controllers.listOfBucketObjects
+    handler: src/app/controllers/index.listOfBucketObjects
     events:
       - http:
           path: /object-list
@@ -57,14 +103,32 @@ functions:
   validateSession:
     handler: src/app/middleware/authorizer.validateSession
   # s3hook:
-  #   handler: src/app/utils/s3_bucket.s3hook
+  #   handler: src/app/handlers/s3_bucket.s3hook
   #   events:
   #     - s3: local-bucket
   #       event: s3:*
+  viewMessageReceiver:
+    handler: src/app/handlers/message_receiver.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - firstQueue
+              - Arn
+      # - sqs:
+      #     arn:
+      #       Fn::GetAtt:
+      #         - secondQueue
+      #         - Arn
+  # lambdaEnqueuer:
+  #   handler: src/app/handlers/lambda_enqueuer.handler
+  #   description: A lambda function that receive message via SNS and enqueue to the SQS queue.
+  #   events:
+  #     - sns: ${self:service}-${self:provider.stage}-sqs-firstQueue
+  #     - sns: ${self:service}-${self:provider.stage}-sqs-secondQueue
 
 plugins:
   - serverless-offline
   - serverless-s3-local
   - serverless-dotenv-plugin
-
-useDotenv: true
+  - serverless-offline-sqs
