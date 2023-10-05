@@ -1,20 +1,20 @@
 'use strict'
 
-import { CreateQueueCommand, ReceiveMessageCommand, SendMessageCommand } from '@aws-sdk/client-sqs'
+import {
+  CreateQueueCommand,
+  ReceiveMessageCommand,
+  SendMessageCommand
+} from '@aws-sdk/client-sqs'
 
 import { sqsClient } from '../utils/aws_config.js'
-import awsHelper from '../utils/aws_helper.js'
+import { getSqsUrl } from '../utils/aws_helper.js'
 
 export const createQueue = async ({ queueName }) => {
   if (!queueName) {
     throw new Error('queueName is required')
   }
 
-  const input = {
-    QueueName: awsHelper.SQS.getFullTopic(queueName)
-  }
-  console.log({ input })
-  const command = new CreateQueueCommand(input)
+  const command = new CreateQueueCommand({ QueueName: queueName })
   return await sqsClient.send(command)
 }
 
@@ -23,20 +23,17 @@ export const publishItemToQueue = async ({ queueName, messageBody }) => {
     throw new Error('queueName and messageBody are required')
   }
 
-  const input = {
-    QueueUrl: awsHelper.SQS.getUrl(queueName),
+  const sendMessageCommand = new SendMessageCommand({
+    QueueUrl: await getSqsUrl(queueName),
     MessageBody: JSON.stringify(messageBody)
-  }
-  const command = new SendMessageCommand(input)
-  return await sqsClient.send(command)
+  })
+  return await sqsClient.send(sendMessageCommand)
 }
 
 export const retrieveMessagesInQueue = async ({ queueName }) => {
-  const input = {
-    QueueUrl: awsHelper.SQS.getUrl(queueName),
+  const command = new ReceiveMessageCommand({
+    QueueUrl: await getSqsUrl(queueName),
     MaxNumberOfMessages: 10
-  }
-  console.log({ input })
-  const command = new ReceiveMessageCommand(input)
+  })
   return await sqsClient.send(command)
 }
