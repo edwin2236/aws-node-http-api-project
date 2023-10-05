@@ -36,10 +36,11 @@ export const listOfS3Object = async () => {
 
   while (isTruncated) {
     const { Contents, IsTruncated, NextContinuationToken } = await awsClient.send(command)
-    console.log({ Contents, IsTruncated, NextContinuationToken })
+
     const contentsList = Contents?.map((c) => c.Key)
     contents = [...contents, ...contentsList]
     isTruncated = IsTruncated
+
     command.input.ContinuationToken = NextContinuationToken
   }
 

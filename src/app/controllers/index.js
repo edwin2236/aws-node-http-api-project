@@ -1,5 +1,5 @@
 import { addS3Object, listOfS3Object } from '../services/s3_bucket_service.js'
-import { publishItemToQueue, retrieveMessagesInQueue } from '../services/sqs_service.js'
+import { publishItemToQueue } from '../services/sqs_service.js'
 import { auditRequest, readJson, response } from '../utils/utilities.js'
 
 const personsData = readJson('mock/persons.json')
@@ -25,8 +25,13 @@ export const path = async (event) => {
 
     return response({ body: { message: 'Hello from path!' } })
   } catch (error) {
-    console.log({ error })
-    return response({ status: 500, body: { message: error.message } })
+    return response({
+      status: 500,
+      body: {
+        message: error.message,
+        stack: error.stack
+      }
+    })
   }
 }
 
@@ -63,11 +68,4 @@ export const addObjectToBucket = async ({ body }) => {
       }
     })
   }
-}
-
-export const viewMessageReceiver = async (event) => {
-  const messages = await retrieveMessagesInQueue({ queueName: 'firstQueue' })
-  console.log({ messages })
-
-  return response({ body: messages })
 }

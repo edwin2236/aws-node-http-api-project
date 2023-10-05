@@ -10,13 +10,14 @@ export const response = ({ status, body }) => {
   }
 }
 
-export const auditRequest = ({ event, queueName = 'firstQueue' }) => {
+export const auditRequest = ({ event, queueName }) => {
   const { requestContext, headers } = event
   const { path, httpMethod, sourceIp } = requestContext
   const { Host: host, 'User-Agent': userAgent } = headers
+  const { QUEUE_NAME } = process.env
 
   return {
-    queueName,
+    queueName: queueName ?? QUEUE_NAME,
     messageBody: {
       path,
       httpMethod,
