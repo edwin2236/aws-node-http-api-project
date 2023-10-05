@@ -7,27 +7,29 @@ provider:
   runtime: nodejs18.x
   region: us-east-1
   stage: ${opt:stage, "development"}
-  profile: default
   memorySize: 128 # minimum memory size on amazon lambda
   environment:
     NODE_ENV: ${self:provider.stage}
     SERVICE: ${self:service}
     AWS_DEPLOY_REGION: ${self:provider.region}
-    AWS_ACCOUNT_ID: "#{AWS::AccountId}"
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - lambda:InvokeFunction
-        - lambda:InvokeAsync
-      Resource: "*"
-    - Effect: Allow
-      Action:
-        - SQS:SendMessage
-        - SQS:DeleteMessage
-        - SQS:ReceiveMessage
-        - SQS:GetQueueUrl
-        - SQS:ListQueues
-      Resource: "*"
+    AWS_ACCOUNT_ID: ${AWS::AccountId}
+    QUEUE_NAME: ${self:service}-${self:provider.stage}-sqs-firstQueue
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+            - lambda:InvokeAsync
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - SQS:SendMessage
+            - SQS:DeleteMessage
+            - SQS:ReceiveMessage
+            - SQS:GetQueueUrl
+            - SQS:ListQueues
+          Resource: "*"
 
 custom:
   s3:
@@ -35,9 +37,6 @@ custom:
     directory: /tmp
   serverless-offline: 
     port: 3001
-  # serverless-offline-sns:
-  #   port: 4002
-  #   debug: false
   serverless-offline-sqs:
     autoCreate: true
     apiVersion: "2012-11-05"
@@ -46,27 +45,29 @@ custom:
     accessKeyId: root
     secretAccessKey: root
     skipCacheInvalidation: false
+  serverless-offline-sqs-dlq:
+    viewMessageReceiver:
+      onError: viewMsgRetrieveDeadLetter
+      maxReceiveCount: 3
 
 resources:
   Resources:
-    NewResource:
+    bucketStorage:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: local-bucket
+        BucketName: ${env:S3_BUCKET_NAME}
     firstQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:service}-${self:provider.stage}-sqs-firstQueue
-        # QueueName: aws-node-http-api-project-development-sqs-firstQueue
-    # secondQueue:
-    #   Type: AWS::SQS::Queue
-    #   Properties:
-    #     QueueName: ${self:service}-${self:provider.stage}-sqs-secondQueue
+    retrieveDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-sqs-retrieveDeadLetterQueue
 
 package:
-  individually: true
-  exclude:
-    - elasticMQ
+  patterns:
+    - '!node_modules/**'
 
 functions:
   home:
@@ -115,6 +116,14 @@ functions:
             Fn::GetAtt:
               - firstQueue
               - Arn
+  viewMsgRetrieveDeadLetter:
+    handler: src/app/handlers/message_receiver.retrieveDeadLetterQueue
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - retrieveDeadLetterQueue
+              - Arn
       # - sqs:
       #     arn:
       #       Fn::GetAtt:
@@ -128,7 +137,8 @@ functions:
   #     - sns: ${self:service}-${self:provider.stage}-sqs-secondQueue
 
 plugins:
+  - serverless-offline-sqs-dlq
+  - serverless-offline-sqs
   - serverless-offline
   - serverless-s3-local
   - serverless-dotenv-plugin
-  - serverless-offline-sqs

@@ -2,6 +2,10 @@
   "name": "aws-node-http-api-project",
   "private": "true",
   "type": "module",
+  "scripts": {
+    "start": "sls offline start",
+    "deploy": "sls deploy --stage production"
+  },
   "devDependencies": {
     "eslint": "8.47.0",
     "eslint-config-standard": "17.1.0",
@@ -11,11 +15,13 @@
     "serverless-dotenv-plugin": "6.0.0",
     "serverless-offline": "12.0.4",
     "serverless-offline-sqs": "7.3.2",
+    "serverless-offline-sqs-dlq": "1.5.2",
     "serverless-s3-local": "0.7.2"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.400.0",
     "@aws-sdk/client-sns": "3.398.0",
-    "@aws-sdk/client-sqs": "3.398.0"
+    "@aws-sdk/client-sqs": "3.398.0",
+    "vertica-nodejs": "^1.0.3"
   }
 }
