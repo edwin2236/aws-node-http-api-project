@@ -135,6 +135,12 @@ functions:
   #   events:
   #     - sns: ${self:service}-${self:provider.stage}-sqs-firstQueue
   #     - sns: ${self:service}-${self:provider.stage}-sqs-secondQueue
+  getProductList:
+    handler: src/app/controllers/index.getProducts
+    events:
+      - http:
+          path: /products
+          method: get
 
 plugins:
   - serverless-offline-sqs-dlq

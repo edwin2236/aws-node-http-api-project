@@ -1,3 +1,4 @@
+import { getAllProducts } from '../services/product_service.js'
 import { addS3Object, listOfS3Object } from '../services/s3_bucket_service.js'
 import { publishItemToQueue } from '../services/sqs_service.js'
 import { auditRequest, readJson, response } from '../utils/utilities.js'
@@ -67,5 +68,16 @@ export const addObjectToBucket = async ({ body }) => {
         message: error.message
       }
     })
+  }
+}
+
+export const getProducts = async (event) => {
+  try {
+    await publishItemToQueue(auditRequest({ event }))
+    const res = await getAllProducts()
+
+    return response({ body: res })
+  } catch (err) {
+    return response({ status: 500, body: { error: err.message } })
   }
 }
